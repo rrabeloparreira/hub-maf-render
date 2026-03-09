@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export HOME="${HOME:-/workspace/home}"
+export RUNTIME_ROOT="${RUNTIME_ROOT:-/tmp/hub-maf}"
+export HOME="${HOME:-${RUNTIME_ROOT}/home}"
 export APP_BRANCH="${APP_BRANCH:-codex/clouddeploy}"
 export CHECK_INTERVAL="${CHECK_INTERVAL:-60}"
+export VENV_DIR="${VENV_DIR:-${RUNTIME_ROOT}/venv}"
+export PIP_CACHE_DIR="${PIP_CACHE_DIR:-${RUNTIME_ROOT}/pip-cache}"
+APP_DIR="${RUNTIME_ROOT}/app"
 
-mkdir -p "${HOME}" /workspace
+mkdir -p "${HOME}" "${RUNTIME_ROOT}"
 
 if [ -z "${GH_REPO_TOKEN:-}" ]; then
   echo "GH_REPO_TOKEN is required" >&2
@@ -22,21 +26,45 @@ if [ -n "${HUB_RUNTIME_ENV_B64:-}" ]; then
   python3 - <<'PY'
 import base64
 import os
+import shlex
 from pathlib import Path
 
+runtime_root = Path(os.environ["RUNTIME_ROOT"])
 payload = os.environ["HUB_RUNTIME_ENV_B64"]
-Path("/workspace/runtime.env").write_bytes(base64.b64decode(payload))
+env_path = runtime_root / "runtime.env"
+shell_path = runtime_root / "runtime.sh"
+env_path.write_bytes(base64.b64decode(payload))
+
+exports = []
+for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+    line = raw_line.strip()
+    if not line or line.startswith("#") or "=" not in line:
+        continue
+    key, value = line.split("=", 1)
+    key = key.strip()
+    if not key:
+        continue
+    exports.append(f"export {key}={shlex.quote(value)}")
+
+shell_path.write_text("\n".join(exports) + "\n", encoding="utf-8")
 PY
   set -a
-  . /workspace/runtime.env
+  . "${RUNTIME_ROOT}/runtime.sh"
   set +a
 fi
 
 repo_url="https://x-access-token:${GH_REPO_TOKEN}@github.com/rrabeloparreira/tutory-automations.git"
 
-if [ ! -d /workspace/app/.git ]; then
-  git clone --depth 1 --branch "${APP_BRANCH}" "${repo_url}" /workspace/app
+if [ ! -d "${APP_DIR}/.git" ]; then
+  git clone \
+    --depth 1 \
+    --filter=blob:none \
+    --single-branch \
+    --no-tags \
+    --branch "${APP_BRANCH}" \
+    "${repo_url}" \
+    "${APP_DIR}"
 fi
 
-cd /workspace/app
-exec /workspace/app/cloud/hub/run_hub.sh
+cd "${APP_DIR}"
+exec "${APP_DIR}/cloud/hub/run_hub.sh"
