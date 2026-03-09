@@ -10,6 +10,8 @@ export PIP_CACHE_DIR="${PIP_CACHE_DIR:-${RUNTIME_ROOT}/pip-cache}"
 APP_DIR="${RUNTIME_ROOT}/app"
 SPARSE_CHECKOUT_FILE="${RUNTIME_ROOT}/sparse-checkout"
 
+mkdir -p "${HOME}" "${RUNTIME_ROOT}"
+
 cat > "${SPARSE_CHECKOUT_FILE}" <<'EOF'
 /*
 !/.cache/
@@ -34,10 +36,15 @@ cat > "${SPARSE_CHECKOUT_FILE}" <<'EOF'
 !/tmp/
 !/tmp_logs_322617/
 !/tmp_uploads/
+!/tutory/__pycache__/
+!/tutory/excel/__pycache__/
+!/tutory/excel/cache/
+!/tutory/excel/examples/
+!/tutory/excel/generated_excels/
+!/tutory/excel/output/
+!/tutory/excel/scripts/__pycache__/
 !/var/
 EOF
-
-mkdir -p "${HOME}" "${RUNTIME_ROOT}"
 
 if [ -z "${GH_REPO_TOKEN:-}" ]; then
   echo "GH_REPO_TOKEN is required" >&2
