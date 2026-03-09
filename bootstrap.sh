@@ -79,12 +79,6 @@ ensure_system_packages() {
   if ! command -v git >/dev/null 2>&1; then
     missing+=(git)
   fi
-  if ! python3 - <<'PY' >/dev/null 2>&1
-import ensurepip  # noqa: F401
-PY
-  then
-    missing+=(python3-venv)
-  fi
 
   if [ "${#missing[@]}" -eq 0 ]; then
     return
@@ -138,11 +132,23 @@ start_placeholder() {
   PLACEHOLDER_PID="$!"
 }
 
+ensure_venv_support() {
+  log "Installing system packages: python3-venv"
+  apt-get update
+  apt-get install -y --no-install-recommends ca-certificates python3-venv
+  rm -rf /var/lib/apt/lists/*
+}
+
 ensure_python_env() {
   mkdir -p "$(dirname "${VENV_DIR}")" "${PIP_CACHE_DIR}"
   if [ ! -x "${VENV_DIR}/bin/python" ]; then
     log "Creating virtualenv"
-    python3 -m venv "${VENV_DIR}"
+    if ! python3 -m venv "${VENV_DIR}"; then
+      rm -rf "${VENV_DIR}"
+      ensure_venv_support
+      log "Retrying virtualenv creation"
+      python3 -m venv "${VENV_DIR}"
+    fi
   fi
 
   local req_file req_hash marker_file
