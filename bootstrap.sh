@@ -43,37 +43,30 @@ trap cleanup EXIT INT TERM
 mkdir -p "${HOME}" "${RUNTIME_ROOT}"
 
 cat > "${SPARSE_CHECKOUT_FILE}" <<'EOF'
-/*
-!/.cache/
-!/.playwright-cli/
-!/.pytest_cache/
-!/.venv/
-!/.venv-pdfservices/
-!/.venv-tutory-suppress/
-!/.vscode/
-!/__pycache__/
-!/analysis/
-!/artifacts/
-!/data/
-!/downloads/
-!/logs/
-!/node_modules/
-!/output/
-!/planos de estudo (tutory)/
-!/reports/
-!/saida/
-!/screens/
-!/tmp/
-!/tmp_logs_322617/
-!/tmp_uploads/
-!/tutory/__pycache__/
-!/tutory/excel/__pycache__/
-!/tutory/excel/cache/
-!/tutory/excel/examples/
-!/tutory/excel/generated_excels/
-!/tutory/excel/output/
-!/tutory/excel/scripts/__pycache__/
-!/var/
+/cloud/
+/configs/
+/generate_plan.py
+/scripts/optimize_postedital_plan.py
+/scripts/update_study_links_xlsx.py
+/analysis/blueprints/
+/analysis/concursos/
+/analysis/controle_provas_pos_edital_internet.csv
+/analysis/controle_provas_pos_edital_internet.md
+/analysis/controle_provas_pos_edital_internet.xlsx
+/analysis/ocr_slide_texts.json
+/analysis/pareamento_tutory_raiox.csv
+/analysis/scores_sefaz_sp_gestao.xlsx
+/tutory/__init__.py
+/tutory/api/
+/tutory/common/
+/tutory/excel/
+/tutory/metas/
+/tutory/optimization/
+/tutory/ordem/
+/tutory/plan_upload.py
+/tutory/planos/
+/tutory/questoes/
+/tutory/web/
 EOF
 
 if [ -z "${GH_REPO_TOKEN:-}" ]; then
