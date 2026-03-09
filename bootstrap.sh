@@ -74,11 +74,29 @@ if [ -z "${GH_REPO_TOKEN:-}" ]; then
   exit 1
 fi
 
-if ! command -v git >/dev/null 2>&1; then
+ensure_system_packages() {
+  local missing=()
+  if ! command -v git >/dev/null 2>&1; then
+    missing+=(git)
+  fi
+  if ! python3 - <<'PY' >/dev/null 2>&1
+import ensurepip  # noqa: F401
+PY
+  then
+    missing+=(python3-venv)
+  fi
+
+  if [ "${#missing[@]}" -eq 0 ]; then
+    return
+  fi
+
+  log "Installing system packages: ${missing[*]}"
   apt-get update
-  apt-get install -y --no-install-recommends ca-certificates git
+  apt-get install -y --no-install-recommends ca-certificates "${missing[@]}"
   rm -rf /var/lib/apt/lists/*
-fi
+}
+
+ensure_system_packages
 
 if [ -n "${HUB_RUNTIME_ENV_B64:-}" ]; then
   python3 - <<'PY'
