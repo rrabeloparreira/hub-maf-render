@@ -8,6 +8,34 @@ export CHECK_INTERVAL="${CHECK_INTERVAL:-60}"
 export VENV_DIR="${VENV_DIR:-${RUNTIME_ROOT}/venv}"
 export PIP_CACHE_DIR="${PIP_CACHE_DIR:-${RUNTIME_ROOT}/pip-cache}"
 APP_DIR="${RUNTIME_ROOT}/app"
+SPARSE_CHECKOUT_FILE="${RUNTIME_ROOT}/sparse-checkout"
+
+cat > "${SPARSE_CHECKOUT_FILE}" <<'EOF'
+/*
+!/.cache/
+!/.playwright-cli/
+!/.pytest_cache/
+!/.venv/
+!/.venv-pdfservices/
+!/.venv-tutory-suppress/
+!/.vscode/
+!/__pycache__/
+!/analysis/
+!/artifacts/
+!/data/
+!/downloads/
+!/logs/
+!/node_modules/
+!/output/
+!/planos de estudo (tutory)/
+!/reports/
+!/saida/
+!/screens/
+!/tmp/
+!/tmp_logs_322617/
+!/tmp_uploads/
+!/var/
+EOF
 
 mkdir -p "${HOME}" "${RUNTIME_ROOT}"
 
@@ -61,9 +89,13 @@ if [ ! -d "${APP_DIR}/.git" ]; then
     --filter=blob:none \
     --single-branch \
     --no-tags \
+    --no-checkout \
     --branch "${APP_BRANCH}" \
     "${repo_url}" \
     "${APP_DIR}"
+  git -C "${APP_DIR}" sparse-checkout init --no-cone
+  cp "${SPARSE_CHECKOUT_FILE}" "${APP_DIR}/.git/info/sparse-checkout"
+  git -C "${APP_DIR}" checkout "${APP_BRANCH}"
 fi
 
 cd "${APP_DIR}"
