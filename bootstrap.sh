@@ -7,8 +7,8 @@ export APP_BRANCH="${APP_BRANCH:-codex/clouddeploy}"
 export CHECK_INTERVAL="${CHECK_INTERVAL:-60}"
 export HOST="${HOST:-0.0.0.0}"
 export PORT="${PORT:-9999}"
-export VENV_DIR="${VENV_DIR:-${RUNTIME_ROOT}/venv}"
 export PIP_CACHE_DIR="${PIP_CACHE_DIR:-${RUNTIME_ROOT}/pip-cache}"
+export PYTHON_PACKAGES_DIR="${PYTHON_PACKAGES_DIR:-${RUNTIME_ROOT}/python-packages}"
 APP_DIR="${RUNTIME_ROOT}/app"
 SPARSE_CHECKOUT_FILE="${RUNTIME_ROOT}/sparse-checkout"
 PLACEHOLDER_PID=""
@@ -132,29 +132,12 @@ start_placeholder() {
   PLACEHOLDER_PID="$!"
 }
 
-ensure_venv_support() {
-  log "Installing system packages: python3-venv"
-  apt-get update
-  apt-get install -y --no-install-recommends ca-certificates python3-venv
-  rm -rf /var/lib/apt/lists/*
-}
-
-ensure_python_env() {
-  mkdir -p "$(dirname "${VENV_DIR}")" "${PIP_CACHE_DIR}"
-  if [ ! -x "${VENV_DIR}/bin/python" ]; then
-    log "Creating virtualenv"
-    if ! python3 -m venv "${VENV_DIR}"; then
-      rm -rf "${VENV_DIR}"
-      ensure_venv_support
-      log "Retrying virtualenv creation"
-      python3 -m venv "${VENV_DIR}"
-    fi
-  fi
-
+ensure_python_packages() {
+  mkdir -p "${PYTHON_PACKAGES_DIR}" "${PIP_CACHE_DIR}"
   local req_file req_hash marker_file
   req_file="${APP_DIR}/cloud/hub/requirements.txt"
   req_hash="$(hash_file "${req_file}")"
-  marker_file="${VENV_DIR}/.requirements-hash"
+  marker_file="${PYTHON_PACKAGES_DIR}/.requirements-hash"
 
   if [ -f "${marker_file}" ] && [ "$(cat "${marker_file}")" = "${req_hash}" ]; then
     log "Python dependencies already cached"
@@ -162,8 +145,15 @@ ensure_python_env() {
   fi
 
   log "Installing Python dependencies"
-  "${VENV_DIR}/bin/pip" install --upgrade pip
-  PIP_CACHE_DIR="${PIP_CACHE_DIR}" "${VENV_DIR}/bin/pip" install --no-input -r "${req_file}"
+  rm -rf "${PYTHON_PACKAGES_DIR}"
+  mkdir -p "${PYTHON_PACKAGES_DIR}"
+  if ! python3 -m pip --version >/dev/null 2>&1; then
+    python3 -m ensurepip --upgrade
+  fi
+  PIP_CACHE_DIR="${PIP_CACHE_DIR}" python3 -m pip install \
+    --no-input \
+    --target "${PYTHON_PACKAGES_DIR}" \
+    -r "${req_file}"
   printf '%s' "${req_hash}" > "${marker_file}"
 }
 
@@ -187,7 +177,7 @@ if [ ! -d "${APP_DIR}/.git" ]; then
   git -C "${APP_DIR}" checkout "${APP_BRANCH}"
 fi
 
-ensure_python_env
+ensure_python_packages
 stop_placeholder
 
 cd "${APP_DIR}"
