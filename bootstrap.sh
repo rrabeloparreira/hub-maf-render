@@ -12,6 +12,12 @@ if [ -z "${GH_REPO_TOKEN:-}" ]; then
   exit 1
 fi
 
+if ! command -v git >/dev/null 2>&1; then
+  apt-get update
+  apt-get install -y --no-install-recommends ca-certificates git
+  rm -rf /var/lib/apt/lists/*
+fi
+
 if [ -n "${HUB_RUNTIME_ENV_B64:-}" ]; then
   python3 - <<'PY'
 import base64
